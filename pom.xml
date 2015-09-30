@@ -23,11 +23,12 @@
 		<bintray.package>netflix</bintray.package>
 		<spring-cloud-commons.version>1.1.0.BUILD-SNAPSHOT</spring-cloud-commons.version>
 		<spring-cloud-config.version>1.1.0.BUILD-SNAPSHOT</spring-cloud-config.version>
+		<spring-cloud-stream.version>1.0.0.BUILD-SNAPSHOT</spring-cloud-stream.version>
 		<main.basedir>${basedir}</main.basedir>
 		<archaius.version>0.6.5</archaius.version>
-		<eureka.version>1.2.0</eureka.version>
-		<feign.version>8.8.1</feign.version>
-		<hystrix.version>1.4.13</hystrix.version>
+		<eureka.version>1.2.5</eureka.version>
+		<feign.version>8.10.0</feign.version>
+		<hystrix.version>1.4.15</hystrix.version>
 		<ribbon.version>2.1.0</ribbon.version>
 		<zuul.version>1.0.28</zuul.version>
 		<rxjava.version>1.0.11</rxjava.version>
@@ -83,87 +84,94 @@
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-starter-eureka</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-starter-eureka-server</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-starter-feign</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-starter-hystrix</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-starter-hystrix-dashboard</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-starter-ribbon</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-starter-turbine</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
-				<artifactId>spring-cloud-starter-turbine-amqp</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<artifactId>spring-cloud-starter-turbine-stream</artifactId>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-starter-zuul</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-netflix-core</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-netflix-eureka-server</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-netflix-hystrix-dashboard</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
-				<artifactId>spring-cloud-netflix-hystrix-amqp</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<artifactId>spring-cloud-netflix-hystrix-stream</artifactId>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-netflix-sidecar</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-netflix-turbine</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
-				<artifactId>spring-cloud-netflix-turbine-amqp</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<artifactId>spring-cloud-netflix-turbine-stream</artifactId>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-netflix-zuul-server</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-stream-parent</artifactId>
+				<version>${spring-cloud-stream.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
 			</dependency>
 			<dependency>
 				<groupId>com.netflix.archaius</groupId>
@@ -231,17 +239,6 @@
 				<groupId>com.netflix.feign</groupId>
 				<artifactId>feign-core</artifactId>
 				<version>${feign.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>com.netflix.feign</groupId>
-				<artifactId>feign-ribbon</artifactId>
-				<version>${feign.version}</version>
-				<exclusions>
-					<exclusion>
-						<groupId>com.netflix.ribbon</groupId>
-						<artifactId>ribbon-loadbalancer</artifactId>
-					</exclusion>
-				</exclusions>
 			</dependency>
 			<dependency>
 				<groupId>com.netflix.feign</groupId>
@@ -380,9 +377,10 @@
 		<module>spring-cloud-netflix-core</module>
 		<module>spring-cloud-netflix-hystrix-dashboard</module>
 		<module>spring-cloud-netflix-hystrix-amqp</module>
+		<module>spring-cloud-netflix-hystrix-stream</module>
 		<module>spring-cloud-netflix-eureka-server</module>
 		<module>spring-cloud-netflix-turbine</module>
-		<module>spring-cloud-netflix-turbine-amqp</module>
+		<module>spring-cloud-netflix-turbine-stream</module>
 		<module>spring-cloud-netflix-sidecar</module>
 		<module>spring-cloud-starter-eureka</module>
 		<module>spring-cloud-starter-eureka-server</module>
@@ -392,6 +390,7 @@
 		<module>spring-cloud-starter-ribbon</module>
 		<module>spring-cloud-starter-turbine</module>
 		<module>spring-cloud-starter-turbine-amqp</module>
+		<module>spring-cloud-starter-turbine-stream</module>
 		<module>spring-cloud-starter-zuul</module>
 		<module>docs</module>
 	</modules>
