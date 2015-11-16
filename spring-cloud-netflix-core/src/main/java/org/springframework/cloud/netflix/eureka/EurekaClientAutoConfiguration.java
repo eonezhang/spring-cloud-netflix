@@ -16,15 +16,11 @@
 
 package org.springframework.cloud.netflix.eureka;
 
-import static org.springframework.cloud.util.IdUtils.getDefaultInstanceId;
-
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
-import lombok.SneakyThrows;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,11 +50,16 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import com.netflix.appinfo.ApplicationInfoManager;
 import com.netflix.appinfo.EurekaInstanceConfig;
 import com.netflix.appinfo.InstanceInfo;
+import com.netflix.discovery.DiscoveryClient.DiscoveryClientOptionalArgs;
 import com.netflix.discovery.EurekaClient;
 import com.netflix.discovery.EurekaClientConfig;
 
+import static org.springframework.cloud.util.IdUtils.getDefaultInstanceId;
+
 /**
  * @author Dave Syer
+ * @author Spencer Gibb
+ * @author Jon Schneider
  */
 @Configuration
 @EnableConfigurationProperties
@@ -91,21 +92,8 @@ public class EurekaClientAutoConfiguration {
 	public EurekaInstanceConfigBean eurekaInstanceConfigBean() {
 		EurekaInstanceConfigBean instance = new EurekaInstanceConfigBean();
 		instance.setNonSecurePort(this.nonSecurePort);
-		instance.setInstanceId(getDefaultInstanceId(env));
+		instance.setInstanceId(getDefaultInstanceId(this.env));
 		return instance;
-	}
-
-	@Bean
-	@ConditionalOnMissingBean(ApplicationInfoManager.class)
-	public ApplicationInfoManager applicationInfoManager(EurekaInstanceConfig config,
-			InstanceInfo instanceInfo) {
-		return new ApplicationInfoManager(config, instanceInfo);
-	}
-
-	@Bean
-	@ConditionalOnMissingBean(InstanceInfo.class)
-	public InstanceInfo instanceInfo(EurekaInstanceConfig config) {
-		return new InstanceInfoFactory().create(config);
 	}
 
 	@Bean
@@ -121,14 +109,25 @@ public class EurekaClientAutoConfiguration {
 		@Autowired
 		private ApplicationContext context;
 
+		@Autowired(required = false)
+		private DiscoveryClientOptionalArgs optionalArgs;
+
 		@Bean(destroyMethod = "shutdown")
 		@ConditionalOnMissingBean(value = EurekaClient.class, search = SearchStrategy.CURRENT)
-		@SneakyThrows
 		public EurekaClient eurekaClient(ApplicationInfoManager applicationInfoManager,
-				EurekaClientConfig config, EurekaInstanceConfig instance) {
-			applicationInfoManager.initComponent(instance);
-			return new CloudEurekaClient(applicationInfoManager, config, this.context);
+				EurekaClientConfig config) {
+			return new CloudEurekaClient(applicationInfoManager, config,
+					this.optionalArgs, this.context);
 		}
+
+		@Bean
+		@ConditionalOnMissingBean(value = ApplicationInfoManager.class, search = SearchStrategy.CURRENT)
+		public ApplicationInfoManager eurekaApplicationInfoManager(
+				EurekaInstanceConfig config) {
+			InstanceInfo instanceInfo = new InstanceInfoFactory().create(config);
+			return new ApplicationInfoManager(config, instanceInfo);
+		}
+
 	}
 
 	@Configuration
@@ -138,19 +137,31 @@ public class EurekaClientAutoConfiguration {
 		@Autowired
 		private ApplicationContext context;
 
+		@Autowired(required = false)
+		private DiscoveryClientOptionalArgs optionalArgs;
+
 		@Bean(destroyMethod = "shutdown")
 		@ConditionalOnMissingBean(value = EurekaClient.class, search = SearchStrategy.CURRENT)
-		@SneakyThrows
 		@org.springframework.cloud.context.config.annotation.RefreshScope
 		public EurekaClient eurekaClient(ApplicationInfoManager applicationInfoManager,
 				EurekaClientConfig config, EurekaInstanceConfig instance) {
-			applicationInfoManager.initComponent(instance);
-			return new CloudEurekaClient(applicationInfoManager, config, this.context);
+			applicationInfoManager.getInfo(); // force initialization
+			return new CloudEurekaClient(applicationInfoManager, config,
+					this.optionalArgs, this.context);
+		}
+
+		@Bean
+		@ConditionalOnMissingBean(value = ApplicationInfoManager.class, search = SearchStrategy.CURRENT)
+		@org.springframework.cloud.context.config.annotation.RefreshScope
+		public ApplicationInfoManager eurekaApplicationInfoManager(
+				EurekaInstanceConfig config) {
+			InstanceInfo instanceInfo = new InstanceInfoFactory().create(config);
+			return new ApplicationInfoManager(config, instanceInfo);
 		}
 
 	}
 
-	@Target({ElementType.TYPE, ElementType.METHOD})
+	@Target({ ElementType.TYPE, ElementType.METHOD })
 	@Retention(RetentionPolicy.RUNTIME)
 	@Documented
 	@Conditional(OnMissingRefreshScopeCondition.class)
@@ -158,7 +169,7 @@ public class EurekaClientAutoConfiguration {
 
 	}
 
-	@Target({ElementType.TYPE, ElementType.METHOD})
+	@Target({ ElementType.TYPE, ElementType.METHOD })
 	@Retention(RetentionPolicy.RUNTIME)
 	@Documented
 	@Conditional(OnRefreshScopeCondition.class)
@@ -176,7 +187,7 @@ public class EurekaClientAutoConfiguration {
 		static class MissingClass {
 		}
 
-		@ConditionalOnMissingBean(RefreshScope.class)
+		@ConditionalOnMissingBean(RefreshAutoConfiguration.class)
 		static class MissingScope {
 		}
 
@@ -189,9 +200,10 @@ public class EurekaClientAutoConfiguration {
 		}
 
 		@ConditionalOnClass(RefreshScope.class)
-		@ConditionalOnBean(RefreshScope.class)
+		@ConditionalOnBean(RefreshAutoConfiguration.class)
 		static class FoundScope {
 		}
 
 	}
+
 }

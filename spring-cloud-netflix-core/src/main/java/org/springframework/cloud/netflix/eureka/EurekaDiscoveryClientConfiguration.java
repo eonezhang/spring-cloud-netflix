@@ -94,10 +94,13 @@ public class EurekaDiscoveryClientConfiguration implements SmartLifecycle, Order
 		// because of containerPortInitializer below
 		if (!this.running.get() && this.instanceConfig.getNonSecurePort() > 0) {
 
-			this.eurekaClient.getApplications(); // force initialization
-			log.info("Registering application " + this.instanceConfig.getAppname()
-					+ " with eureka with status "
-					+ this.instanceConfig.getInitialStatus());
+			maybeInitializeClient();
+
+			if (log.isInfoEnabled()) {
+				log.info("Registering application " + this.instanceConfig.getAppname()
+						+ " with eureka with status "
+						+ this.instanceConfig.getInitialStatus());
+			}
 
 			this.applicationInfoManager
 					.setInstanceStatus(this.instanceConfig.getInitialStatus());
@@ -111,11 +114,21 @@ public class EurekaDiscoveryClientConfiguration implements SmartLifecycle, Order
 		}
 	}
 
+	private void maybeInitializeClient() {
+		// force initialization of possibly scoped proxies
+		this.applicationInfoManager.getInfo();
+		this.eurekaClient.getApplications();
+	}
+
 	@Override
 	public void stop() {
 		if (this.applicationInfoManager.getInfo() != null) {
-			log.info("Unregistering application " + this.instanceConfig.getAppname()
-					+ " with eureka with status DOWN");
+
+			if (log.isInfoEnabled()) {
+				log.info("Unregistering application " + this.instanceConfig.getAppname()
+						+ " with eureka with status DOWN");
+			}
+
 			this.applicationInfoManager.setInstanceStatus(InstanceStatus.DOWN);
 		}
 		this.running.set(false);
@@ -150,9 +163,12 @@ public class EurekaDiscoveryClientConfiguration implements SmartLifecycle, Order
 	@EventListener(EmbeddedServletContainerInitializedEvent.class)
 	public void onApplicationEvent(EmbeddedServletContainerInitializedEvent event) {
 		// TODO: take SSL into account when Spring Boot 1.2 is available
-		EurekaDiscoveryClientConfiguration.this.port.compareAndSet(0,
-				event.getEmbeddedServletContainer().getPort());
-		EurekaDiscoveryClientConfiguration.this.start();
+		int localPort = event.getEmbeddedServletContainer().getPort();
+		if (this.port.get() == 0) {
+			log.info("Updating port to " + localPort);
+			this.port.compareAndSet(0, localPort);
+			start();
+		}
 	}
 
 	@Configuration

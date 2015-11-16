@@ -29,6 +29,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +48,8 @@ import org.springframework.cloud.netflix.ribbon.RibbonClient;
 import org.springframework.cloud.netflix.ribbon.StaticServerList;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -52,15 +58,14 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.netflix.hystrix.HystrixCommand;
 import com.netflix.loadbalancer.Server;
 import com.netflix.loadbalancer.ServerList;
 
 import feign.Client;
+import feign.Logger;
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  * @author Spencer Gibb
@@ -68,8 +73,10 @@ import lombok.NoArgsConstructor;
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = FeignClientTests.Application.class)
-@WebIntegrationTest(randomPort = true, value = { "spring.application.name=feignclienttest",
-	"feign.httpclient.enabled=false"})
+@WebIntegrationTest(randomPort = true, value = {
+		"spring.application.name=feignclienttest",
+		"logging.level.org.springframework.cloud.netflix.feign.valid=DEBUG",
+		"feign.httpclient.enabled=false", "feign.okhttp.enabled=false"})
 @DirtiesContext
 public class FeignClientTests {
 
@@ -102,6 +109,15 @@ public class FeignClientTests {
 
 		@RequestMapping(method = RequestMethod.GET, value = "/helloparams")
 		List<String> getParams(@RequestParam("params") List<String> params);
+
+		@RequestMapping(method = RequestMethod.GET, value = "/hellos")
+		HystrixCommand<List<Hello>> getHellosHystrix();
+
+		@RequestMapping(method = RequestMethod.GET, value = "/noContent")
+		ResponseEntity noContent();
+
+		@RequestMapping(method = RequestMethod.HEAD, value = "/head")
+		ResponseEntity head();
 	}
 
 	@FeignClient(serviceId = "localapp")
@@ -113,7 +129,8 @@ public class FeignClientTests {
 	@Configuration
 	@EnableAutoConfiguration
 	@RestController
-	@EnableFeignClients
+	@EnableFeignClients(clients = {TestClientServiceId.class, TestClient.class},
+			defaultConfiguration = TestDefaultFeignConfig.class)
 	@RibbonClient(name = "localapp", configuration = LocalRibbonClientConfiguration.class)
 	protected static class Application {
 
@@ -168,6 +185,16 @@ public class FeignClientTests {
 		@RequestMapping(method = RequestMethod.GET, value = "/helloparams")
 		public List<String> getParams(@RequestParam("params") List<String> params) {
 			return params;
+		}
+
+		@RequestMapping(method = RequestMethod.GET, value = "/noContent")
+		ResponseEntity noContent() {
+			return ResponseEntity.noContent().build();
+		}
+
+		@RequestMapping(method = RequestMethod.HEAD, value = "/head")
+		ResponseEntity head() {
+			return ResponseEntity.ok().build();
 		}
 
 		public static void main(String[] args) {
@@ -241,24 +268,55 @@ public class FeignClientTests {
 		assertEquals("params size was wrong", list.size(), params.size());
 	}
 
+	@Test
+	public void testHystrixCommand() {
+		HystrixCommand<List<Hello>> command = this.testClient.getHellosHystrix();
+		assertNotNull("command was null", command);
+		List<Hello> hellos = command.execute();
+		assertNotNull("hellos was null", hellos);
+		assertEquals("hellos didn't match", hellos, getHelloList());
+	}
+
+	@Test
+	public void testNoContentResponse() {
+		ResponseEntity response = testClient.noContent();
+		assertNotNull("response was null", response);
+		assertEquals("status code was wrong", HttpStatus.NO_CONTENT, response.getStatusCode());
+	}
+
+	@Test
+	public void testHeadResponse() {
+		ResponseEntity response = testClient.head();
+		assertNotNull("response was null", response);
+		assertEquals("status code was wrong", HttpStatus.OK, response.getStatusCode());
+	}
+
 	@Data
 	@AllArgsConstructor
 	@NoArgsConstructor
 	public static class Hello {
 		private String message;
 	}
-}
 
-// Load balancer with fixed server list for "local" pointing to localhost
-@Configuration
-class LocalRibbonClientConfiguration {
-
-	@Value("${local.server.port}")
-	private int port = 0;
-
-	@Bean
-	public ServerList<Server> ribbonServerList() {
-		return new StaticServerList<>(new Server("localhost", this.port));
+	@Configuration
+	public static class TestDefaultFeignConfig {
+		@Bean
+		Logger.Level feignLoggerLevel() {
+			return Logger.Level.FULL;
+		}
 	}
 
+	// Load balancer with fixed server list for "local" pointing to localhost
+	@Configuration
+	public static class LocalRibbonClientConfiguration {
+
+		@Value("${local.server.port}")
+		private int port = 0;
+
+		@Bean
+		public ServerList<Server> ribbonServerList() {
+			return new StaticServerList<>(new Server("localhost", this.port));
+		}
+
+	}
 }
